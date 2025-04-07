@@ -6,72 +6,216 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Leaflet.heat Plugin -->
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
   <style>
     body { margin: 0; padding: 0; }
     #map { width: 100%; height: 100vh; }
-    /* Menu styling */
-    #menu {
+    /* Map Title styling */
+    #map-title {
       position: absolute;
       top: 10px;
-      left: 10px;
-      background: white;
-      padding: 10px;
+      left: 50%;
+      transform: translateX(-50%);
       font-family: Arial, sans-serif;
-      z-index: 1000;
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+      background: rgba(255,255,255,0.8);
+      padding: 5px 10px;
+      border-radius: 5px;
+      z-index: 1100;
+    }
+    /* Chart container styling (Pie Chart, Chart Info, & Heatmap Toggle) */
+    #chart-container {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      width: 300px;
+      background: rgba(255,255,255,0.9);
+      padding: 10px;
       border-radius: 5px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      z-index: 1100;
+      display: flex;
+      flex-direction: column;
     }
-    #menu label img {
-      width: 20px;
-      height: 20px;
-      vertical-align: middle;
-      margin-right: 5px;
+    #serviceChart { flex: 1; max-height: 200px; }
+    #chart-info { margin-top: 10px; font-family: Arial, sans-serif; font-size: 14px; }
+    #chart-info ul { list-style: none; padding: 0; margin: 0; }
+    #chart-info li { margin-bottom: 4px; }
+    #heatmap-toggle-container { margin-top: 10px; font-family: Arial, sans-serif; }
+    /* Bar Chart container styling */
+    #bar-chart-container {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      width: 300px;
+      height: 300px;
+      background: rgba(255,255,255,0.9);
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      z-index: 1100;
+    }
+    /* Interactive Legend styling */
+    #legend {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.9);
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      z-index: 1100;
+      font-family: Arial, sans-serif;
+    }
+    #legend h4 { margin: 0 0 10px; font-size: 16px; text-align: center; }
+    #legend ul { list-style: none; padding: 0; margin: 0; }
+    #legend li { display: flex; align-items: center; margin-bottom: 5px; cursor: pointer; }
+    #legend li img { width: 20px; height: 20px; margin-right: 5px; }
+    /* Basemap Switcher styling */
+    .basemap-control {
+      background: rgba(255,255,255,0.9);
+      padding: 5px;
+      border-radius: 5px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .coord-control {
+      background: rgba(255,255,255,0.9);
+      padding: 5px;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      margin: 5px;
+      border-radius: 5px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 <body>
-  <!-- Layer Toggle Menu -->
-  <div id="menu">
-    <h4>Toggle Layers</h4>
-    <label>
-      <input type="checkbox" id="firestations-toggle" checked>
-      <img src="assets/icons/fire-station.png" alt="Fire Station Icon"> Fire Stations
-    </label><br>
-    <label>
-      <input type="checkbox" id="hospitals-toggle" checked>
-      <img src="assets/icons/hospital.png" alt="Hospital Icon"> Hospitals
-    </label><br>
-    <label>
-      <input type="checkbox" id="libraries-toggle" checked>
-      <img src="assets/icons/library.png" alt="Library Icon"> Libraries
-    </label><br>
-    <label>
-      <input type="checkbox" id="schools-toggle">
-      <img src="assets/icons/education.png" alt="School Icon"> Schools
-    </label><br>
-    <label>
-      <input type="checkbox" id="busStops-toggle">
-      <img src="assets/icons/bus-stop.png" alt="Bus Stop Icon"> Bus Stops
+  <!-- Map Title -->
+  <div id="map-title">Hillsborough County Services Visualization</div>
+  
+  <!-- Interactive Legend -->
+  <div id="legend">
+    <h4>Legend</h4>
+    <ul id="legend-list">
+      <!-- Legend items will be populated dynamically -->
+    </ul>
+  </div>
+  
+  <!-- Basemap Switcher Control -->
+  <div id="basemap-switcher" class="basemap-control" style="position: fixed; top: 10px; left: 10px; z-index: 1100;">
+    <label>Basemap: 
+      <select id="basemap-select">
+        <option value="Positron">Positron</option>
+        <option value="Dark Matter">Dark Matter</option>
+        <option value="Toner Lite">Toner Lite</option>
+      </select>
     </label>
+  </div>
+  
+  <!-- Coordinate Display Control -->
+  <div id="coord-display" class="coord-control" style="position: fixed; bottom: 10px; left: 320px; z-index: 1100;">
+    Lat, Lng
   </div>
 
   <!-- Map Container -->
   <div id="map"></div>
+  
+  <!-- Chart Container (for Pie Chart, Chart Info, & Heatmap Toggle) -->
+  <div id="chart-container">
+    <canvas id="serviceChart"></canvas>
+    <div id="chart-info"></div>
+    <div id="heatmap-toggle-container">
+      <label><input type="checkbox" id="heatmap-toggle"> Show Heat Map</label>
+    </div>
+  </div>
+
+  <!-- Bar Chart Container -->
+  <div id="bar-chart-container">
+    <canvas id="barChart"></canvas>
+  </div>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <!-- MarkerCluster JS -->
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
   <script>
     // Initialize the map centered on Hillsborough County with zoom level 11
     const map = L.map('map', { zoomControl: true }).setView([27.9506, -82.3248], 11);
-    // Reposition the zoom control to the bottom left
     map.zoomControl.setPosition('bottomleft');
 
-    // Add the OSM Positron basemap (via CartoDB Positron tile layer)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+    // Define basemaps
+    const basemaps = {
+      "Positron": "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+      "Dark Matter": "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+      "Toner Lite": "https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png"
+    };
+
+    // Set default basemap
+    let currentBasemapLayer = L.tileLayer(basemaps["Positron"], {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      subdomains: 'abcd'
     }).addTo(map);
 
-    // Define custom icons using your provided file names
+    // Basemap Switcher Control
+    var basemapControl = L.control({ position: 'topright' });
+    basemapControl.onAdd = function(map) {
+      var div = L.DomUtil.create('div', 'basemap-control');
+      div.innerHTML = '<label>Basemap: </label>' +
+                      '<select id="basemap-select">' +
+                      '<option value="Positron">Positron</option>' +
+                      '<option value="Dark Matter">Dark Matter</option>' +
+                      '<option value="Toner Lite">Toner Lite</option>' +
+                      '</select>';
+      L.DomEvent.disableClickPropagation(div);
+      return div;
+    };
+    basemapControl.addTo(map);
+
+    // Event listener for basemap switching
+    document.getElementById('basemap-select').addEventListener('change', function(e) {
+      var selected = e.target.value;
+      map.removeLayer(currentBasemapLayer);
+      if(selected === "Positron"){
+         currentBasemapLayer = L.tileLayer(basemaps["Positron"], { attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd' });
+      } else if(selected === "Dark Matter"){
+         currentBasemapLayer = L.tileLayer(basemaps["Dark Matter"], { attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd' });
+      } else if(selected === "Toner Lite"){
+         currentBasemapLayer = L.tileLayer(basemaps["Toner Lite"], { attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', subdomains: 'abcd' });
+      }
+      currentBasemapLayer.addTo(map);
+    });
+
+    // Add a scale bar
+    L.control.scale().addTo(map);
+
+    // Coordinate Display: Create a custom control for showing mouse coordinates
+    var coordControl = L.control({position: 'bottomright'});
+    coordControl.onAdd = function(map) {
+      var div = L.DomUtil.create('div', 'coord-control');
+      div.id = 'coord-display';
+      div.innerHTML = 'Lat, Lng';
+      return div;
+    };
+    coordControl.addTo(map);
+
+    // Update coordinate display on mouse move
+    map.on('mousemove', function(e) {
+      var lat = e.latlng.lat.toFixed(5);
+      var lng = e.latlng.lng.toFixed(5);
+      document.getElementById('coord-display').innerHTML = 'Lat: ' + lat + ', Lng: ' + lng;
+    });
+
+    // Define custom icons
     const fireStationIcon = L.icon({
       iconUrl: 'assets/icons/fire-station.png',
       iconSize: [30, 40],
@@ -103,103 +247,346 @@
       popupAnchor: [0, -35]
     });
 
-    // Global variables for each layer
+    // Global variables for each clustered layer
     let fireStationsLayer, hospitalsLayer, librariesLayer, schoolsLayer, busStopsLayer;
+    // Global variable for heat map layer
+    let heatLayer;
 
-    // Utility function to load GeoJSON layers
-    function loadLayer(url, options) {
+    // Define layersData array before loading layers
+    const layersData = [
+      { toggleId: 'firestations-toggle', label: 'Fire Stations', layer: () => fireStationsLayer, color: '#ff0000', icon: 'assets/icons/fire-station.png', active: false },
+      { toggleId: 'hospitals-toggle', label: 'Hospitals', layer: () => hospitalsLayer, color: '#008000', icon: 'assets/icons/hospital.png', active: false },
+      { toggleId: 'libraries-toggle', label: 'Libraries', layer: () => librariesLayer, color: '#800080', icon: 'assets/icons/library.png', active: false },
+      { toggleId: 'schools-toggle', label: 'Schools', layer: () => schoolsLayer, color: '#ffa500', icon: 'assets/icons/education.png', active: false },
+      { toggleId: 'busStops-toggle', label: 'Bus Stops', layer: () => busStopsLayer, color: '#ffc0cb', icon: 'assets/icons/bus-stop.png', active: false }
+    ];
+
+    // Utility function to load a GeoJSON layer into a MarkerClusterGroup
+    function loadClusterLayer(url, options) {
       return fetch(url)
         .then(response => response.json())
-        .then(data => L.geoJSON(data, options));
+        .then(data => {
+          const geojsonLayer = L.geoJSON(data, options);
+          const clusterGroup = L.markerClusterGroup();
+          clusterGroup.addLayer(geojsonLayer);
+          return clusterGroup;
+        });
     }
 
     // Load Fire Stations layer
-    loadLayer('data/FireStations.geojson', {
+    loadClusterLayer('data/FireStations.geojson', {
       onEachFeature: function(feature, layer) {
         layer.bindPopup(feature.properties.AKA_NAME || "No Name");
       },
       pointToLayer: function(feature, latlng) {
         return L.marker(latlng, { icon: fireStationIcon });
       }
-    }).then(layer => {
-      fireStationsLayer = layer;
-      if (document.getElementById('firestations-toggle').checked)
-        fireStationsLayer.addTo(map);
+    }).then(clusterGroup => {
+      fireStationsLayer = clusterGroup;
+      layersData[0].active = true;
+      fireStationsLayer.addTo(map);
+      updateAll();
     });
 
     // Load Hospitals layer
-    loadLayer('data/Hospitals.geojson', {
+    loadClusterLayer('data/Hospitals.geojson', {
       onEachFeature: function(feature, layer) {
         layer.bindPopup(feature.properties.NAME || "No Name");
       },
       pointToLayer: function(feature, latlng) {
         return L.marker(latlng, { icon: hospitalIcon });
       }
-    }).then(layer => {
-      hospitalsLayer = layer;
-      if (document.getElementById('hospitals-toggle').checked)
-        hospitalsLayer.addTo(map);
+    }).then(clusterGroup => {
+      hospitalsLayer = clusterGroup;
+      layersData[1].active = true;
+      hospitalsLayer.addTo(map);
+      updateAll();
     });
 
     // Load Libraries layer
-    loadLayer('data/Libraries.geojson', {
+    loadClusterLayer('data/Libraries.geojson', {
       onEachFeature: function(feature, layer) {
         layer.bindPopup(feature.properties.name || "No Name");
       },
       pointToLayer: function(feature, latlng) {
         return L.marker(latlng, { icon: libraryIcon });
       }
-    }).then(layer => {
-      librariesLayer = layer;
-      if (document.getElementById('libraries-toggle').checked)
-        librariesLayer.addTo(map);
+    }).then(clusterGroup => {
+      librariesLayer = clusterGroup;
+      layersData[2].active = true;
+      librariesLayer.addTo(map);
+      updateAll();
     });
 
     // Load Schools layer (turned off by default)
-    loadLayer('data/Schools.geojson', {
+    loadClusterLayer('data/Schools.geojson', {
       onEachFeature: function(feature, layer) {
-        // Using "NAME" field as per previous update
         layer.bindPopup(feature.properties.NAME || feature.properties.name || "No Name");
       },
       pointToLayer: function(feature, latlng) {
         return L.marker(latlng, { icon: schoolIcon });
       }
-    }).then(layer => {
-      schoolsLayer = layer;
-      if (document.getElementById('schools-toggle').checked)
-        schoolsLayer.addTo(map);
+    }).then(clusterGroup => {
+      schoolsLayer = clusterGroup;
+      layersData[3].active = false;
+      updateAll();
     });
 
-    // Load Bus Stops layer - loaded last so they appear at the bottom of the stack
-    loadLayer('data/HART_Stop_Locations.geojson', {
+    // Load Bus Stops layer (turned off by default, loaded last)
+    loadClusterLayer('data/HART_Stop_Locations.geojson', {
       onEachFeature: function(feature, layer) {
         layer.bindPopup(feature.properties.name || "No Name");
       },
       pointToLayer: function(feature, latlng) {
         return L.marker(latlng, { icon: busStopIcon });
       }
-    }).then(layer => {
-      busStopsLayer = layer;
-      if (document.getElementById('busStops-toggle').checked)
-        busStopsLayer.addTo(map);
+    }).then(clusterGroup => {
+      busStopsLayer = clusterGroup;
+      layersData[4].active = false;
+      updateAll();
     });
 
-    // Toggle event listeners for each checkbox
-    document.getElementById('firestations-toggle').addEventListener('change', function(e) {
-      e.target.checked ? fireStationsLayer.addTo(map) : map.removeLayer(fireStationsLayer);
-    });
-    document.getElementById('hospitals-toggle').addEventListener('change', function(e) {
-      e.target.checked ? hospitalsLayer.addTo(map) : map.removeLayer(hospitalsLayer);
-    });
-    document.getElementById('libraries-toggle').addEventListener('change', function(e) {
-      e.target.checked ? librariesLayer.addTo(map) : map.removeLayer(librariesLayer);
-    });
-    document.getElementById('schools-toggle').addEventListener('change', function(e) {
-      e.target.checked ? schoolsLayer.addTo(map) : map.removeLayer(schoolsLayer);
-    });
-    document.getElementById('busStops-toggle').addEventListener('change', function(e) {
-      e.target.checked ? busStopsLayer.addTo(map) : map.removeLayer(busStopsLayer);
-    });
+    // Interactive Legend: Build and update the legend based on layersData
+    function updateLegend() {
+      const legendList = document.getElementById('legend-list');
+      legendList.innerHTML = '';
+      layersData.forEach((entry) => {
+        const li = document.createElement('li');
+        li.style.opacity = entry.active ? 1 : 0.5;
+        li.innerHTML = `<img src="${entry.icon}" alt="${entry.label} Icon"> ${entry.label}`;
+        li.addEventListener('click', () => {
+          // Toggle active state
+          entry.active = !entry.active;
+          const lyr = entry.layer();
+          if (entry.active) {
+            lyr.addTo(map);
+          } else {
+            map.removeLayer(lyr);
+          }
+          updateLegend();
+          updateAll();
+        });
+        legendList.appendChild(li);
+      });
+    }
+
+    // Chart.js (Pie Chart) initialization
+    let pieChart;
+    function initPieChart(dataCounts, labels, bgColors) {
+      const ctx = document.getElementById('serviceChart').getContext('2d');
+      pieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: dataCounts,
+            backgroundColor: bgColors
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'bottom' }
+          }
+        }
+      });
+    }
+
+    // Function to update pie chart based on markers currently in view and active layers
+    function updatePieChart() {
+      const bounds = map.getBounds();
+      const activeLabels = [];
+      const activeCounts = [];
+      const activeColors = [];
+      
+      // Helper function to count features within bounds for a given cluster group
+      function countFeatures(clusterGroup) {
+        let count = 0;
+        if (clusterGroup && clusterGroup.getLayers) {
+          clusterGroup.getLayers().forEach(marker => {
+            if (marker.getLatLng && bounds.contains(marker.getLatLng())) {
+              count++;
+            } else if (marker.getAllChildMarkers) {
+              marker.getAllChildMarkers().forEach(childMarker => {
+                if (bounds.contains(childMarker.getLatLng())) {
+                  count++;
+                }
+              });
+            }
+          });
+        }
+        return count;
+      }
+      
+      layersData.forEach(entry => {
+        if (entry.active) {
+          const clusterGroup = entry.layer();
+          if (clusterGroup) {
+            const count = countFeatures(clusterGroup);
+            activeLabels.push(entry.label);
+            activeCounts.push(count);
+            activeColors.push(entry.color);
+          }
+        }
+      });
+      
+      if (pieChart) {
+        pieChart.data.labels = activeLabels;
+        pieChart.data.datasets[0].data = activeCounts;
+        pieChart.data.datasets[0].backgroundColor = activeColors;
+        pieChart.update();
+      } else {
+        initPieChart(activeCounts, activeLabels, activeColors);
+      }
+      
+      // Update chart info below the pie chart
+      const chartInfoDiv = document.getElementById('chart-info');
+      let infoHTML = '<ul>';
+      activeLabels.forEach((label, index) => {
+        infoHTML += `<li><strong>${label}:</strong> ${activeCounts[index]}</li>`;
+      });
+      infoHTML += '</ul>';
+      chartInfoDiv.innerHTML = infoHTML;
+    }
+
+    // Bar Chart: Create a bar chart showing overall counts (ignoring map bounds)
+    let barChart;
+    function initBarChart(dataCounts, labels, bgColors) {
+      const ctx = document.getElementById('barChart').getContext('2d');
+      barChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Overall Count',
+            data: dataCounts,
+            backgroundColor: bgColors
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+    function updateBarChart() {
+      const activeLabels = [];
+      const overallCounts = [];
+      const activeColors = [];
+      
+      // Helper function to count overall features (ignoring bounds) for a given cluster group
+      function countOverallFeatures(clusterGroup) {
+        let count = 0;
+        if (clusterGroup && clusterGroup.getLayers) {
+          clusterGroup.getLayers().forEach(marker => {
+            if (marker.getLatLng) {
+              count++;
+            } else if (marker.getAllChildMarkers) {
+              count += marker.getAllChildMarkers().length;
+            }
+          });
+        }
+        return count;
+      }
+      
+      layersData.forEach(entry => {
+        if (entry.active) {
+          const clusterGroup = entry.layer();
+          if (clusterGroup) {
+            const count = countOverallFeatures(clusterGroup);
+            activeLabels.push(entry.label);
+            overallCounts.push(count);
+            activeColors.push(entry.color);
+          }
+        }
+      });
+      
+      if (barChart) {
+        barChart.data.labels = activeLabels;
+        barChart.data.datasets[0].data = overallCounts;
+        barChart.data.datasets[0].backgroundColor = activeColors;
+        barChart.update();
+      } else {
+        initBarChart(overallCounts, activeLabels, activeColors);
+      }
+    }
+
+    // Heat Map: Aggregate all active markers' coordinates and update a heat layer.
+    function getActiveMarkerCoords() {
+      let coords = [];
+      layersData.forEach(entry => {
+        if (entry.active) {
+          const clusterGroup = entry.layer();
+          if (clusterGroup && clusterGroup.getLayers) {
+            clusterGroup.getLayers().forEach(marker => {
+              if (marker.getLatLng) {
+                const latlng = marker.getLatLng();
+                coords.push([latlng.lat, latlng.lng, 1]);
+              } else if (marker.getAllChildMarkers) {
+                marker.getAllChildMarkers().forEach(child => {
+                  const latlng = child.getLatLng();
+                  coords.push([latlng.lat, latlng.lng, 1]);
+                });
+              }
+            });
+          }
+        }
+      });
+      return coords;
+    }
+    function updateHeatMap() {
+      if (document.getElementById('heatmap-toggle').checked) {
+        const coords = getActiveMarkerCoords();
+        if (heatLayer) {
+          heatLayer.setLatLngs(coords);
+        } else {
+          heatLayer = L.heatLayer(coords, { radius: 25, blur: 15, maxZoom: 17 });
+          heatLayer.addTo(map);
+        }
+      } else {
+        if (heatLayer) {
+          map.removeLayer(heatLayer);
+        }
+      }
+    }
+
+    // Combined update function for charts and heat map
+    function updateAll() {
+      updatePieChart();
+      updateBarChart();
+      updateHeatMap();
+    }
+
+    // Update charts and heat map when map view changes
+    map.on('moveend zoomend', updateAll);
+
+    // Heat map toggle event listener
+    document.getElementById('heatmap-toggle').addEventListener('change', updateAll);
+
+    // Initialize the chart, bar chart, and legend after a short delay to allow layers to load
+    setTimeout(() => {
+      // Set initial active states based on desired defaults:
+      // Fire Stations, Hospitals, Libraries are on; Schools and Bus Stops off.
+      layersData[0].active = true;
+      layersData[1].active = true;
+      layersData[2].active = true;
+      layersData[3].active = false;
+      layersData[4].active = false;
+      
+      if (layersData[0].active && fireStationsLayer) fireStationsLayer.addTo(map);
+      if (layersData[1].active && hospitalsLayer) hospitalsLayer.addTo(map);
+      if (layersData[2].active && librariesLayer) librariesLayer.addTo(map);
+      if (layersData[3].active && schoolsLayer) schoolsLayer.addTo(map);
+      if (layersData[4].active && busStopsLayer) busStopsLayer.addTo(map);
+      
+      updateAll();
+      updateLegend();
+    }, 3000);
   </script>
 </body>
 </html>
