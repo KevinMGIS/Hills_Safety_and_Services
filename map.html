@@ -43,12 +43,10 @@
     <h4>Toggle Layers</h4>
     <label style="color: #ff0000;"><input type="checkbox" id="firestations-checkbox" checked> Fire Stations</label><br>
     <label style="color: #0000ff;"><input type="checkbox" id="busRoutes-checkbox"> Bus Routes</label><br>
-    <label style="color: #ffa500;"><input type="checkbox" id="busStops-checkbox"> Bus Stops</label><br>
+    <label style="color: #ffc0cb;"><input type="checkbox" id="busStops-checkbox"> Bus Stops</label><br>
     <label style="color: #008000;"><input type="checkbox" id="hospitals-checkbox" checked> Hospitals</label><br>
     <label style="color: #800080;"><input type="checkbox" id="libraries-checkbox" checked> Libraries</label><br>
-    <label style="color: #ffff00;"><input type="checkbox" id="schools-checkbox" checked> Schools</label><br>
-    <label style="color: #90ee90;"><input type="checkbox" id="parks-checkbox" checked> Parks & Recreation</label><br>
-    <label style="color: #cccccc;"><input type="checkbox" id="urbanServiceAreas-checkbox"> Urban Service Areas</label>
+    <label style="color: #ffa500;"><input type="checkbox" id="schools-checkbox" checked> Schools</label>
   </div>
   
   <!-- Map container -->
@@ -56,7 +54,7 @@
   
   <!-- Dashboard container for charts -->
   <div id="dashboard">
-    <h2>Hospital Counts by Urban Service Area</h2>
+    <h2>Service Counts</h2>
     <canvas id="facilityChart" width="400" height="400"></canvas>
   </div>
 
@@ -78,24 +76,20 @@
     const layerColors = {
       'firestations-layer': '#ff0000',
       'busRoutes-layer': '#0000ff',
-      'busStops-layer': '#ffa500',
+      'busStops-layer': '#ffc0cb', // light pink
       'hospitals-layer': '#008000',
       'libraries-layer': '#800080',
-      'schools-layer': '#ffff00',
-      'parks-layer': '#90ee90',
-      'urbanServiceAreas-layer': '#cccccc'
+      'schools-layer': '#ffa500'  // orange
     };
 
-    // List of layer configurations to toggle
+    // List of layer configurations to toggle (excluding Urban Service Areas)
     const layers = [
       { id: 'firestations-layer', checkboxId: 'firestations-checkbox' },
       { id: 'busRoutes-layer', checkboxId: 'busRoutes-checkbox' },
       { id: 'busStops-layer', checkboxId: 'busStops-checkbox' },
       { id: 'hospitals-layer', checkboxId: 'hospitals-checkbox' },
       { id: 'libraries-layer', checkboxId: 'libraries-checkbox' },
-      { id: 'schools-layer', checkboxId: 'schools-checkbox' },
-      { id: 'parks-layer', checkboxId: 'parks-checkbox' },
-      { id: 'urbanServiceAreas-layer', checkboxId: 'urbanServiceAreas-checkbox' }
+      { id: 'schools-layer', checkboxId: 'schools-checkbox' }
     ];
 
     // Toggle layer visibility based on checkbox status
@@ -220,7 +214,7 @@
       addPopup('libraries-layer', 'Library', 'name');
 
       // ---------------------
-      // 6. Schools Layer - Assuming property 'name'
+      // 6. Schools Layer - Using 'name' (change if necessary)
       // ---------------------
       map.addSource('schools', {
         type: 'geojson',
@@ -238,110 +232,37 @@
       addPopup('schools-layer', 'School', 'name');
 
       // ---------------------
-      // 7. Parks & Recreation Layer (Polygon) - Assuming property 'name'
-      // ---------------------
-      map.addSource('parks', {
-        type: 'geojson',
-        data: 'data/Parks_and_Recreation.geojson'
-      });
-      map.addLayer({
-        id: 'parks-layer',
-        type: 'fill',
-        source: 'parks',
-        paint: {
-          'fill-color': layerColors['parks-layer'],
-          'fill-opacity': 0.5,
-          'fill-outline-color': '#228B22'
-        }
-      });
-      addPopup('parks-layer', 'Park', 'name');
-
-      // ---------------------
-      // 8. Urban Service Areas Layer (Polygon) - Hidden by default
-      // ---------------------
-      map.addSource('urbanServiceAreas', {
-        type: 'geojson',
-        data: 'data/UrbanServiceAreas.geojson'
-      });
-      map.addLayer({
-        id: 'urbanServiceAreas-layer',
-        type: 'fill',
-        source: 'urbanServiceAreas',
-        layout: { 'visibility': 'none' },
-        paint: {
-          'fill-color': layerColors['urbanServiceAreas-layer'],
-          'fill-opacity': 0.3,
-          'fill-outline-color': '#888888'
-        }
-      });
-      // (Optional: add pop-ups for urban areas if needed.)
-
-      // ---------------------
-      // Perform spatial analysis with Turf.js: Count Hospitals in each Urban Service Area
-      // Instead of a fixed timeout, wait until the map is idle (all sources loaded)
+      // Create a Pie Chart after the map is idle (all sources loaded)
       // ---------------------
       map.once('idle', function() {
-        function analyzeHospitals() {
-          const urbanAreas = map.getSource('urbanServiceAreas')._data.features;
-          const hospitalFeatures = map.getSource('hospitals')._data.features;
-          
-          console.log('Urban Areas:', urbanAreas);
-          console.log('Hospital Features:', hospitalFeatures);
-          
-          // Create an object to store counts per urban area using a unique property (e.g., 'id' or 'name')
-          const counts = {};
-          urbanAreas.forEach(area => {
-            const areaLabel = area.properties.id || area.properties.name || 'Area';
-            counts[areaLabel] = 0;
-            hospitalFeatures.forEach(hospital => {
-              if (turf.booleanPointInPolygon(hospital, area)) {
-                counts[areaLabel]++;
-              }
-            });
-          });
+        // Extract feature counts for each service layer
+        const fireCount = map.getSource('firestations')._data.features.length;
+        const hospitalCount = map.getSource('hospitals')._data.features.length;
+        const libraryCount = map.getSource('libraries')._data.features.length;
+        const schoolCount = map.getSource('schools')._data.features.length;
 
-          // Count hospitals outside any urban area
-          let outsideCount = 0;
-          hospitalFeatures.forEach(hospital => {
-            const insideAny = urbanAreas.some(area => turf.booleanPointInPolygon(hospital, area));
-            if (!insideAny) {
-              outsideCount++;
-            }
-          });
+        // Labels and counts for the pie chart
+        const labels = ['Fire Stations', 'Hospitals', 'Libraries', 'Schools'];
+        const counts = [fireCount, hospitalCount, libraryCount, schoolCount];
 
-          console.log('Hospital counts by urban area:', counts);
-          console.log('Hospitals outside urban areas:', outsideCount);
-          return { counts, outsideCount };
-        }
-
-        const analysisResults = analyzeHospitals();
-
-        // Prepare data for Chart.js: labels and counts
-        const labels = Object.keys(analysisResults.counts);
-        const countsData = Object.values(analysisResults.counts);
-        labels.push('Outside Urban Areas');
-        countsData.push(analysisResults.outsideCount);
-
-        // Create a bar chart using Chart.js
+        // Create a pie chart using Chart.js
         const ctx = document.getElementById('facilityChart').getContext('2d');
         new Chart(ctx, {
-          type: 'bar',
+          type: 'pie',
           data: {
             labels: labels,
             datasets: [{
-              label: 'Number of Hospitals',
-              data: countsData,
-              backgroundColor: labels.map(() => '#008000') // using hospitals color; adjust if needed
+              data: counts,
+              backgroundColor: [
+                layerColors['firestations-layer'],
+                layerColors['hospitals-layer'],
+                layerColors['libraries-layer'],
+                layerColors['schools-layer']
+              ]
             }]
           },
           options: {
-            responsive: true,
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: { stepSize: 1 }
-              }
-            }
+            responsive: true
           }
         });
       });
