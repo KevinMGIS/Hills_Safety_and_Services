@@ -2,28 +2,213 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Minimal Map Test</title>
+  <title>Hillsborough Community Map</title>
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css" rel="stylesheet">
   <style>
     body { margin: 0; padding: 0; }
-    #map { width: 100%; height: 100vh; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    #menu {
+      position: absolute;
+      background: white;
+      padding: 10px;
+      font-family: Arial, sans-serif;
+      z-index: 1;
+      margin: 10px;
+      border-radius: 4px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
+  <div id="menu">
+    <h4>Toggle Layers</h4>
+    <label style="color: #ff0000;"><input type="checkbox" id="firestations-checkbox" checked> Fire Stations</label><br>
+    <label style="color: #0000ff;"><input type="checkbox" id="busRoutes-checkbox"> Bus Routes</label><br>
+    <label style="color: #ffa500;"><input type="checkbox" id="busStops-checkbox"> Bus Stops</label><br>
+    <label style="color: #008000;"><input type="checkbox" id="hospitals-checkbox" checked> Hospitals</label><br>
+    <label style="color: #800080;"><input type="checkbox" id="libraries-checkbox" checked> Libraries</label><br>
+    <label style="color: #ffff00;"><input type="checkbox" id="schools-checkbox" checked> Schools</label><br>
+    <label style="color: #90ee90;"><input type="checkbox" id="parks-checkbox" checked> Parks & Recreation</label>
+  </div>
+  
   <div id="map"></div>
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js"></script>
   <script>
+    // Set your Mapbox access token
     mapboxgl.accessToken = 'pk.eyJ1Ijoia2V2aW5tZ2lzIiwiYSI6ImNtOTY3bnJtbzFoN3Iybm9tZXkzNXg1d2QifQ.CM5JgkXadbZBg4hb0jtMjQ';
+
+    // Initialize the map with your custom style
     const map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/kevinmgis/cm96zanry009t01qt89a4caxl',
       center: [-82.3248, 27.9506],
       zoom: 10
     });
-    
-    map.on('error', function(e) {
-      console.error('Mapbox error:', e.error);
+
+    // Configuration for layer colors (same as marker colors)
+    const layerColors = {
+      'firestations-layer': '#ff0000',
+      'busRoutes-layer': '#0000ff',
+      'busStops-layer': '#ffa500',
+      'hospitals-layer': '#008000',
+      'libraries-layer': '#800080',
+      'schools-layer': '#ffff00',
+      'parks-layer': '#90ee90'
+    };
+
+    // List of layer configurations to toggle
+    const layers = [
+      { id: 'firestations-layer', checkboxId: 'firestations-checkbox' },
+      { id: 'busRoutes-layer', checkboxId: 'busRoutes-checkbox' },
+      { id: 'busStops-layer', checkboxId: 'busStops-checkbox' },
+      { id: 'hospitals-layer', checkboxId: 'hospitals-checkbox' },
+      { id: 'libraries-layer', checkboxId: 'libraries-checkbox' },
+      { id: 'schools-layer', checkboxId: 'schools-checkbox' },
+      { id: 'parks-layer', checkboxId: 'parks-checkbox' }
+    ];
+
+    // Add event listeners to checkboxes to toggle layer visibility
+    layers.forEach(layer => {
+      document.getElementById(layer.checkboxId).addEventListener('change', function(e) {
+        const visibility = e.target.checked ? 'visible' : 'none';
+        map.setLayoutProperty(layer.id, 'visibility', visibility);
+      });
+    });
+
+    // Function to add a popup on feature click
+    function addPopup(layerId, labelText) {
+      map.on('click', layerId, function(e) {
+        const feature = e.features[0];
+        const content = `<strong style="color: ${layerColors[layerId]};">${labelText}:</strong> ${feature.properties.name || 'No name provided'}`;
+        new mapboxgl.Popup()
+          .setLngLat(e.lngLat)
+          .setHTML(content)
+          .addTo(map);
+      });
+      
+      map.on('mouseenter', layerId, function() {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', layerId, function() {
+        map.getCanvas().style.cursor = '';
+      });
+    }
+
+    map.on('load', function() {
+      // Fire Stations Layer
+      map.addSource('firestations', {
+        type: 'geojson',
+        data: 'data/FireStations.geojson'
+      });
+      map.addLayer({
+        id: 'firestations-layer',
+        type: 'circle',
+        source: 'firestations',
+        paint: {
+          'circle-radius': 6,
+          'circle-color': layerColors['firestations-layer']
+        }
+      });
+      addPopup('firestations-layer', 'Fire Station');
+
+      // Bus Routes (hidden by default)
+      map.addSource('busRoutes', {
+        type: 'geojson',
+        data: 'data/HART_Bus_Routes.geojson'
+      });
+      map.addLayer({
+        id: 'busRoutes-layer',
+        type: 'line',
+        source: 'busRoutes',
+        layout: { 'visibility': 'none' },
+        paint: {
+          'line-width': 2,
+          'line-color': layerColors['busRoutes-layer']
+        }
+      });
+
+      // Bus Stops (hidden by default)
+      map.addSource('busStops', {
+        type: 'geojson',
+        data: 'data/HART_Stop_Locations.geojson'
+      });
+      map.addLayer({
+        id: 'busStops-layer',
+        type: 'circle',
+        source: 'busStops',
+        layout: { 'visibility': 'none' },
+        paint: {
+          'circle-radius': 5,
+          'circle-color': layerColors['busStops-layer']
+        }
+      });
+      addPopup('busStops-layer', 'Bus Stop');
+
+      // Hospitals Layer
+      map.addSource('hospitals', {
+        type: 'geojson',
+        data: 'data/Hospitals.geojson'
+      });
+      map.addLayer({
+        id: 'hospitals-layer',
+        type: 'circle',
+        source: 'hospitals',
+        paint: {
+          'circle-radius': 6,
+          'circle-color': layerColors['hospitals-layer']
+        }
+      });
+      addPopup('hospitals-layer', 'Hospital');
+
+      // Libraries Layer
+      map.addSource('libraries', {
+        type: 'geojson',
+        data: 'data/Libraries.geojson'
+      });
+      map.addLayer({
+        id: 'libraries-layer',
+        type: 'circle',
+        source: 'libraries',
+        paint: {
+          'circle-radius': 6,
+          'circle-color': layerColors['libraries-layer']
+        }
+      });
+      addPopup('libraries-layer', 'Library');
+
+      // Schools Layer
+      map.addSource('schools', {
+        type: 'geojson',
+        data: 'data/Schools.geojson'
+      });
+      map.addLayer({
+        id: 'schools-layer',
+        type: 'circle',
+        source: 'schools',
+        paint: {
+          'circle-radius': 6,
+          'circle-color': layerColors['schools-layer']
+        }
+      });
+      addPopup('schools-layer', 'School');
+
+      // Parks & Recreation Layer (Polygon)
+      map.addSource('parks', {
+        type: 'geojson',
+        data: 'data/Parks_and_Recreation.geojson'
+      });
+      map.addLayer({
+        id: 'parks-layer',
+        type: 'fill',
+        source: 'parks',
+        paint: {
+          'fill-color': layerColors['parks-layer'],
+          'fill-opacity': 0.5,
+          'fill-outline-color': '#228B22'
+        }
+      });
+      addPopup('parks-layer', 'Park');
     });
   </script>
 </body>
