@@ -76,31 +76,32 @@
       });
     });
 
-  // Function to add a popup on feature click
-function addPopup(layerId, labelText) {
-  map.on('click', layerId, function(e) {
-    const feature = e.features[0];
-    console.log('Clicked feature properties:', feature.properties);
-    // Try "name", then "NAME", or fallback to a default message
-    const props = feature.properties;
-    const featureName = props.name || props.NAME || 'No name provided';
-    const content = `<strong style="color: ${layerColors[layerId]};">${labelText}:</strong> ${featureName}`;
-    new mapboxgl.Popup()
-      .setLngLat(e.lngLat)
-      .setHTML(content)
-      .addTo(map);
-  });
-  
-  map.on('mouseenter', layerId, function() {
-    map.getCanvas().style.cursor = 'pointer';
-  });
-  map.on('mouseleave', layerId, function() {
-    map.getCanvas().style.cursor = '';
-  });
-}
+    // Function to add a popup on feature click.
+    // Accepts a propertyName parameter to indicate which property holds the name.
+    function addPopup(layerId, labelText, propertyName) {
+      map.on('click', layerId, function(e) {
+        const feature = e.features[0];
+        console.log('Clicked feature properties:', feature.properties);
+        const props = feature.properties;
+        // Use the provided property name first, then fallback to generic checks.
+        const featureName = props[propertyName] || props.name || props.NAME || 'No name provided';
+        const content = `<strong style="color: ${layerColors[layerId]};">${labelText}:</strong> ${featureName}`;
+        new mapboxgl.Popup()
+          .setLngLat(e.lngLat)
+          .setHTML(content)
+          .addTo(map);
+      });
+      
+      map.on('mouseenter', layerId, function() {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', layerId, function() {
+        map.getCanvas().style.cursor = '';
+      });
+    }
 
     map.on('load', function() {
-      // Fire Stations Layer
+      // Fire Stations Layer - Using 'AKA_NAME' for the name
       map.addSource('firestations', {
         type: 'geojson',
         data: 'data/FireStations.geojson'
@@ -114,7 +115,7 @@ function addPopup(layerId, labelText) {
           'circle-color': layerColors['firestations-layer']
         }
       });
-      addPopup('firestations-layer', 'Fire Station');
+      addPopup('firestations-layer', 'Fire Station', 'AKA_NAME');
 
       // Bus Routes (hidden by default)
       map.addSource('busRoutes', {
@@ -131,6 +132,7 @@ function addPopup(layerId, labelText) {
           'line-color': layerColors['busRoutes-layer']
         }
       });
+      // (Optional pop-up for bus routes if needed)
 
       // Bus Stops (hidden by default)
       map.addSource('busStops', {
@@ -147,9 +149,9 @@ function addPopup(layerId, labelText) {
           'circle-color': layerColors['busStops-layer']
         }
       });
-      addPopup('busStops-layer', 'Bus Stop');
+      addPopup('busStops-layer', 'Bus Stop', 'name'); // Change property as needed
 
-      // Hospitals Layer
+      // Hospitals Layer - Using 'NAME' for the hospital name
       map.addSource('hospitals', {
         type: 'geojson',
         data: 'data/Hospitals.geojson'
@@ -163,9 +165,9 @@ function addPopup(layerId, labelText) {
           'circle-color': layerColors['hospitals-layer']
         }
       });
-      addPopup('hospitals-layer', 'Hospital');
+      addPopup('hospitals-layer', 'Hospital', 'NAME');
 
-      // Libraries Layer
+      // Libraries Layer - Assuming the property is 'name' (adjust if needed)
       map.addSource('libraries', {
         type: 'geojson',
         data: 'data/Libraries.geojson'
@@ -179,9 +181,9 @@ function addPopup(layerId, labelText) {
           'circle-color': layerColors['libraries-layer']
         }
       });
-      addPopup('libraries-layer', 'Library');
+      addPopup('libraries-layer', 'Library', 'name');
 
-      // Schools Layer
+      // Schools Layer - Assuming the property is 'name' (adjust if needed)
       map.addSource('schools', {
         type: 'geojson',
         data: 'data/Schools.geojson'
@@ -195,9 +197,9 @@ function addPopup(layerId, labelText) {
           'circle-color': layerColors['schools-layer']
         }
       });
-      addPopup('schools-layer', 'School');
+      addPopup('schools-layer', 'School', 'name');
 
-      // Parks & Recreation Layer (Polygon)
+      // Parks & Recreation Layer (Polygon) - Assuming the property is 'name'
       map.addSource('parks', {
         type: 'geojson',
         data: 'data/Parks_and_Recreation.geojson'
@@ -212,7 +214,7 @@ function addPopup(layerId, labelText) {
           'fill-outline-color': '#228B22'
         }
       });
-      addPopup('parks-layer', 'Park');
+      addPopup('parks-layer', 'Park', 'name');
     });
   </script>
 </body>
