@@ -76,24 +76,28 @@
       });
     });
 
-    // Function to add a popup on feature click
-    function addPopup(layerId, labelText) {
-      map.on('click', layerId, function(e) {
-        const feature = e.features[0];
-        const content = `<strong style="color: ${layerColors[layerId]};">${labelText}:</strong> ${feature.properties.name || 'No name provided'}`;
-        new mapboxgl.Popup()
-          .setLngLat(e.lngLat)
-          .setHTML(content)
-          .addTo(map);
-      });
-      
-      map.on('mouseenter', layerId, function() {
-        map.getCanvas().style.cursor = 'pointer';
-      });
-      map.on('mouseleave', layerId, function() {
-        map.getCanvas().style.cursor = '';
-      });
-    }
+  // Function to add a popup on feature click
+function addPopup(layerId, labelText) {
+  map.on('click', layerId, function(e) {
+    const feature = e.features[0];
+    console.log('Clicked feature properties:', feature.properties);
+    // Try "name", then "NAME", or fallback to a default message
+    const props = feature.properties;
+    const featureName = props.name || props.NAME || 'No name provided';
+    const content = `<strong style="color: ${layerColors[layerId]};">${labelText}:</strong> ${featureName}`;
+    new mapboxgl.Popup()
+      .setLngLat(e.lngLat)
+      .setHTML(content)
+      .addTo(map);
+  });
+  
+  map.on('mouseenter', layerId, function() {
+    map.getCanvas().style.cursor = 'pointer';
+  });
+  map.on('mouseleave', layerId, function() {
+    map.getCanvas().style.cursor = '';
+  });
+}
 
     map.on('load', function() {
       // Fire Stations Layer
