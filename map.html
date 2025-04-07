@@ -2,25 +2,43 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Hillsborough Community Map</title>
+  <title>Hillsborough Community Map & Analysis</title>
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <!-- Mapbox GL JS CSS -->
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Turf.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
   <style>
     body { margin: 0; padding: 0; }
-    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    #map { position: absolute; top: 0; bottom: 0; width: 70%; }
     #menu {
       position: absolute;
+      top: 10px;
+      left: 10px;
       background: white;
       padding: 10px;
       font-family: Arial, sans-serif;
-      z-index: 1;
-      margin: 10px;
+      z-index: 2;
       border-radius: 4px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    #dashboard {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 30%;
+      height: 100%;
+      background: #f9f9f9;
+      overflow-y: auto;
+      padding: 20px;
+      box-shadow: -2px 0 5px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 <body>
+  <!-- Menu for layer toggles -->
   <div id="menu">
     <h4>Toggle Layers</h4>
     <label style="color: #ff0000;"><input type="checkbox" id="firestations-checkbox" checked> Fire Stations</label><br>
@@ -29,10 +47,20 @@
     <label style="color: #008000;"><input type="checkbox" id="hospitals-checkbox" checked> Hospitals</label><br>
     <label style="color: #800080;"><input type="checkbox" id="libraries-checkbox" checked> Libraries</label><br>
     <label style="color: #ffff00;"><input type="checkbox" id="schools-checkbox" checked> Schools</label><br>
-    <label style="color: #90ee90;"><input type="checkbox" id="parks-checkbox" checked> Parks & Recreation</label>
+    <label style="color: #90ee90;"><input type="checkbox" id="parks-checkbox" checked> Parks & Recreation</label><br>
+    <label style="color: #cccccc;"><input type="checkbox" id="urbanServiceAreas-checkbox"> Urban Service Areas</label>
   </div>
   
+  <!-- Map container -->
   <div id="map"></div>
+  
+  <!-- Dashboard container for charts -->
+  <div id="dashboard">
+    <h2>Hospital Counts by Urban Service Area</h2>
+    <canvas id="facilityChart" width="400" height="400"></canvas>
+  </div>
+
+  <!-- Mapbox GL JS -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js"></script>
   <script>
     // Set your Mapbox access token
@@ -46,7 +74,7 @@
       zoom: 10
     });
 
-    // Configuration for layer colors (same as marker colors)
+    // Configuration for layer colors (used for markers and menu labels)
     const layerColors = {
       'firestations-layer': '#ff0000',
       'busRoutes-layer': '#0000ff',
@@ -54,7 +82,8 @@
       'hospitals-layer': '#008000',
       'libraries-layer': '#800080',
       'schools-layer': '#ffff00',
-      'parks-layer': '#90ee90'
+      'parks-layer': '#90ee90',
+      'urbanServiceAreas-layer': '#cccccc'
     };
 
     // List of layer configurations to toggle
@@ -65,10 +94,11 @@
       { id: 'hospitals-layer', checkboxId: 'hospitals-checkbox' },
       { id: 'libraries-layer', checkboxId: 'libraries-checkbox' },
       { id: 'schools-layer', checkboxId: 'schools-checkbox' },
-      { id: 'parks-layer', checkboxId: 'parks-checkbox' }
+      { id: 'parks-layer', checkboxId: 'parks-checkbox' },
+      { id: 'urbanServiceAreas-layer', checkboxId: 'urbanServiceAreas-checkbox' }
     ];
 
-    // Add event listeners to checkboxes to toggle layer visibility
+    // Toggle layer visibility based on checkbox status
     layers.forEach(layer => {
       document.getElementById(layer.checkboxId).addEventListener('change', function(e) {
         const visibility = e.target.checked ? 'visible' : 'none';
@@ -76,14 +106,11 @@
       });
     });
 
-    // Function to add a popup on feature click.
-    // Accepts a propertyName parameter to indicate which property holds the name.
+    // Function to add popups on feature click. Accepts a propertyName parameter.
     function addPopup(layerId, labelText, propertyName) {
       map.on('click', layerId, function(e) {
         const feature = e.features[0];
-        console.log('Clicked feature properties:', feature.properties);
         const props = feature.properties;
-        // Use the provided property name first, then fallback to generic checks.
         const featureName = props[propertyName] || props.name || props.NAME || 'No name provided';
         const content = `<strong style="color: ${layerColors[layerId]};">${labelText}:</strong> ${featureName}`;
         new mapboxgl.Popup()
@@ -101,7 +128,9 @@
     }
 
     map.on('load', function() {
-      // Fire Stations Layer - Using 'AKA_NAME' for the name
+      // ---------------------
+      // 1. Fire Stations Layer - Using 'AKA_NAME'
+      // ---------------------
       map.addSource('firestations', {
         type: 'geojson',
         data: 'data/FireStations.geojson'
@@ -117,7 +146,9 @@
       });
       addPopup('firestations-layer', 'Fire Station', 'AKA_NAME');
 
-      // Bus Routes (hidden by default)
+      // ---------------------
+      // 2. Bus Routes (hidden by default)
+      // ---------------------
       map.addSource('busRoutes', {
         type: 'geojson',
         data: 'data/HART_Bus_Routes.geojson'
@@ -132,9 +163,11 @@
           'line-color': layerColors['busRoutes-layer']
         }
       });
-      // (Optional pop-up for bus routes if needed)
+      // (Optional: add pop-up for bus routes if needed)
 
-      // Bus Stops (hidden by default)
+      // ---------------------
+      // 3. Bus Stops (hidden by default)
+      // ---------------------
       map.addSource('busStops', {
         type: 'geojson',
         data: 'data/HART_Stop_Locations.geojson'
@@ -149,9 +182,11 @@
           'circle-color': layerColors['busStops-layer']
         }
       });
-      addPopup('busStops-layer', 'Bus Stop', 'name'); // Change property as needed
+      addPopup('busStops-layer', 'Bus Stop', 'name');
 
-      // Hospitals Layer - Using 'NAME' for the hospital name
+      // ---------------------
+      // 4. Hospitals Layer - Using 'NAME'
+      // ---------------------
       map.addSource('hospitals', {
         type: 'geojson',
         data: 'data/Hospitals.geojson'
@@ -167,7 +202,9 @@
       });
       addPopup('hospitals-layer', 'Hospital', 'NAME');
 
-      // Libraries Layer - Assuming the property is 'name' (adjust if needed)
+      // ---------------------
+      // 5. Libraries Layer - Assuming property 'name'
+      // ---------------------
       map.addSource('libraries', {
         type: 'geojson',
         data: 'data/Libraries.geojson'
@@ -183,7 +220,9 @@
       });
       addPopup('libraries-layer', 'Library', 'name');
 
-      // Schools Layer - Assuming the property is 'name' (adjust if needed)
+      // ---------------------
+      // 6. Schools Layer - Assuming property 'name'
+      // ---------------------
       map.addSource('schools', {
         type: 'geojson',
         data: 'data/Schools.geojson'
@@ -199,7 +238,9 @@
       });
       addPopup('schools-layer', 'School', 'name');
 
-      // Parks & Recreation Layer (Polygon) - Assuming the property is 'name'
+      // ---------------------
+      // 7. Parks & Recreation Layer (Polygon) - Assuming property 'name'
+      // ---------------------
       map.addSource('parks', {
         type: 'geojson',
         data: 'data/Parks_and_Recreation.geojson'
@@ -215,6 +256,96 @@
         }
       });
       addPopup('parks-layer', 'Park', 'name');
+
+      // ---------------------
+      // 8. Urban Service Areas Layer (Polygon) - Hidden by default
+      // ---------------------
+      map.addSource('urbanServiceAreas', {
+        type: 'geojson',
+        data: 'data/UrbanServiceAreas.geojson'
+      });
+      map.addLayer({
+        id: 'urbanServiceAreas-layer',
+        type: 'fill',
+        source: 'urbanServiceAreas',
+        layout: { 'visibility': 'none' },
+        paint: {
+          'fill-color': layerColors['urbanServiceAreas-layer'],
+          'fill-opacity': 0.3,
+          'fill-outline-color': '#888888'
+        }
+      });
+      // (Optionally, you can add pop-ups for urban areas if needed.)
+
+      // ---------------------
+      // Perform spatial analysis with Turf.js: Count Hospitals in each Urban Service Area
+      // ---------------------
+      function analyzeHospitals() {
+        // Retrieve the Urban Service Areas GeoJSON and Hospital features
+        const urbanAreas = map.getSource('urbanServiceAreas')._data.features;
+        const hospitalFeatures = map.getSource('hospitals')._data.features;
+
+        // Create an object to store counts per urban area using a unique property (e.g., 'id' or 'name')
+        const counts = {};
+        urbanAreas.forEach(area => {
+          // Use a property like 'id' or 'name' from the area
+          const areaLabel = area.properties.id || area.properties.name || 'Area';
+          counts[areaLabel] = 0;
+          hospitalFeatures.forEach(hospital => {
+            if (turf.booleanPointInPolygon(hospital, area)) {
+              counts[areaLabel]++;
+            }
+          });
+        });
+
+        // Count hospitals outside any urban area
+        let outsideCount = 0;
+        hospitalFeatures.forEach(hospital => {
+          const insideAny = urbanAreas.some(area => turf.booleanPointInPolygon(hospital, area));
+          if (!insideAny) {
+            outsideCount++;
+          }
+        });
+
+        console.log('Hospital counts by urban area:', counts);
+        console.log('Hospitals outside urban areas:', outsideCount);
+        return { counts, outsideCount };
+      }
+
+      // After all layers have loaded, perform the analysis and update the chart.
+      setTimeout(() => {
+        const analysisResults = analyzeHospitals();
+
+        // Prepare data for Chart.js: labels and counts
+        const labels = Object.keys(analysisResults.counts);
+        const countsData = Object.values(analysisResults.counts);
+        // Add the outside count as an extra category
+        labels.push('Outside Urban Areas');
+        countsData.push(analysisResults.outsideCount);
+
+        // Create a bar chart using Chart.js
+        const ctx = document.getElementById('facilityChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Number of Hospitals',
+              data: countsData,
+              backgroundColor: labels.map(label => '#008000') // using hospitals color; customize if needed
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 }
+              }
+            }
+          }
+        });
+      }, 2000); // Delay to ensure sources are loaded; adjust as needed
     });
   </script>
 </body>
