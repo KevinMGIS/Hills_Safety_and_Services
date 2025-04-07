@@ -163,7 +163,6 @@
           'line-color': layerColors['busRoutes-layer']
         }
       });
-      // (Optional: add pop-up for bus routes if needed)
 
       // ---------------------
       // 3. Bus Stops (hidden by default)
@@ -275,51 +274,51 @@
           'fill-outline-color': '#888888'
         }
       });
-      // (Optionally, you can add pop-ups for urban areas if needed.)
+      // (Optional: add pop-ups for urban areas if needed.)
 
       // ---------------------
       // Perform spatial analysis with Turf.js: Count Hospitals in each Urban Service Area
+      // Instead of a fixed timeout, wait until the map is idle (all sources loaded)
       // ---------------------
-      function analyzeHospitals() {
-        // Retrieve the Urban Service Areas GeoJSON and Hospital features
-        const urbanAreas = map.getSource('urbanServiceAreas')._data.features;
-        const hospitalFeatures = map.getSource('hospitals')._data.features;
+      map.once('idle', function() {
+        function analyzeHospitals() {
+          const urbanAreas = map.getSource('urbanServiceAreas')._data.features;
+          const hospitalFeatures = map.getSource('hospitals')._data.features;
+          
+          console.log('Urban Areas:', urbanAreas);
+          console.log('Hospital Features:', hospitalFeatures);
+          
+          // Create an object to store counts per urban area using a unique property (e.g., 'id' or 'name')
+          const counts = {};
+          urbanAreas.forEach(area => {
+            const areaLabel = area.properties.id || area.properties.name || 'Area';
+            counts[areaLabel] = 0;
+            hospitalFeatures.forEach(hospital => {
+              if (turf.booleanPointInPolygon(hospital, area)) {
+                counts[areaLabel]++;
+              }
+            });
+          });
 
-        // Create an object to store counts per urban area using a unique property (e.g., 'id' or 'name')
-        const counts = {};
-        urbanAreas.forEach(area => {
-          // Use a property like 'id' or 'name' from the area
-          const areaLabel = area.properties.id || area.properties.name || 'Area';
-          counts[areaLabel] = 0;
+          // Count hospitals outside any urban area
+          let outsideCount = 0;
           hospitalFeatures.forEach(hospital => {
-            if (turf.booleanPointInPolygon(hospital, area)) {
-              counts[areaLabel]++;
+            const insideAny = urbanAreas.some(area => turf.booleanPointInPolygon(hospital, area));
+            if (!insideAny) {
+              outsideCount++;
             }
           });
-        });
 
-        // Count hospitals outside any urban area
-        let outsideCount = 0;
-        hospitalFeatures.forEach(hospital => {
-          const insideAny = urbanAreas.some(area => turf.booleanPointInPolygon(hospital, area));
-          if (!insideAny) {
-            outsideCount++;
-          }
-        });
+          console.log('Hospital counts by urban area:', counts);
+          console.log('Hospitals outside urban areas:', outsideCount);
+          return { counts, outsideCount };
+        }
 
-        console.log('Hospital counts by urban area:', counts);
-        console.log('Hospitals outside urban areas:', outsideCount);
-        return { counts, outsideCount };
-      }
-
-      // After all layers have loaded, perform the analysis and update the chart.
-      setTimeout(() => {
         const analysisResults = analyzeHospitals();
 
         // Prepare data for Chart.js: labels and counts
         const labels = Object.keys(analysisResults.counts);
         const countsData = Object.values(analysisResults.counts);
-        // Add the outside count as an extra category
         labels.push('Outside Urban Areas');
         countsData.push(analysisResults.outsideCount);
 
@@ -332,7 +331,7 @@
             datasets: [{
               label: 'Number of Hospitals',
               data: countsData,
-              backgroundColor: labels.map(label => '#008000') // using hospitals color; customize if needed
+              backgroundColor: labels.map(() => '#008000') // using hospitals color; adjust if needed
             }]
           },
           options: {
@@ -345,7 +344,7 @@
             }
           }
         });
-      }, 2000); // Delay to ensure sources are loaded; adjust as needed
+      });
     });
   </script>
 </body>
