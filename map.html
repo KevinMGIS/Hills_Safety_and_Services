@@ -117,7 +117,7 @@
       <select id="basemap-select">
         <option value="Positron">Positron</option>
         <option value="Dark Matter">Dark Matter</option>
-        <option value="Toner Lite">Toner Lite</option>
+        <option value="OpenStreetMap">OpenStreetMap</option>
       </select>
     </label>
   </div>
@@ -157,8 +157,15 @@
     const basemaps = {
       "Positron": "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
       "Dark Matter": "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-      "Toner Lite": "https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png"
+      "OpenStreetMap": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
     };
+
+    // Update the dropdown options
+    document.getElementById('basemap-select').innerHTML = `
+      <option value="Positron">Positron</option>
+      <option value="Dark Matter">Dark Matter</option>
+      <option value="OpenStreetMap">OpenStreetMap</option>
+    `;
 
     // Set default basemap
     let currentBasemapLayer = L.tileLayer(basemaps["Positron"], {
@@ -166,31 +173,16 @@
       subdomains: 'abcd'
     }).addTo(map);
 
-    // Basemap Switcher Control
-    var basemapControl = L.control({ position: 'topright' });
-    basemapControl.onAdd = function(map) {
-      var div = L.DomUtil.create('div', 'basemap-control');
-      div.innerHTML = '<label>Basemap: </label>' +
-                      '<select id="basemap-select">' +
-                      '<option value="Positron">Positron</option>' +
-                      '<option value="Dark Matter">Dark Matter</option>' +
-                      '<option value="Toner Lite">Toner Lite</option>' +
-                      '</select>';
-      L.DomEvent.disableClickPropagation(div);
-      return div;
-    };
-    basemapControl.addTo(map);
-
     // Event listener for basemap switching
     document.getElementById('basemap-select').addEventListener('change', function(e) {
       var selected = e.target.value;
       map.removeLayer(currentBasemapLayer);
-      if(selected === "Positron"){
-         currentBasemapLayer = L.tileLayer(basemaps["Positron"], { attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd' });
-      } else if(selected === "Dark Matter"){
-         currentBasemapLayer = L.tileLayer(basemaps["Dark Matter"], { attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd' });
-      } else if(selected === "Toner Lite"){
-         currentBasemapLayer = L.tileLayer(basemaps["Toner Lite"], { attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', subdomains: 'abcd' });
+      if (selected === "Positron") {
+        currentBasemapLayer = L.tileLayer(basemaps["Positron"], { attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd' });
+      } else if (selected === "Dark Matter") {
+        currentBasemapLayer = L.tileLayer(basemaps["Dark Matter"], { attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd' });
+      } else if (selected === "OpenStreetMap") {
+        currentBasemapLayer = L.tileLayer(basemaps["OpenStreetMap"], { attribution: '&copy; OpenStreetMap contributors' });
       }
       currentBasemapLayer.addTo(map);
     });
