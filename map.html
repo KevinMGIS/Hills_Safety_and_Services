@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Leaflet Dark Matter Map with Layer Toggle</title>
+  <title>Hillsborough County Services Visualization</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -21,18 +21,38 @@
       border-radius: 5px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
+    #menu label img {
+      width: 20px;
+      height: 20px;
+      vertical-align: middle;
+      margin-right: 5px;
+    }
   </style>
 </head>
 <body>
   <!-- Layer Toggle Menu -->
   <div id="menu">
     <h4>Toggle Layers</h4>
-    <label><input type="checkbox" id="firestations-toggle" checked> Fire Stations</label><br>
-    <label><input type="checkbox" id="busRoutes-toggle" checked> Bus Routes</label><br>
-    <label><input type="checkbox" id="busStops-toggle" checked> Bus Stops</label><br>
-    <label><input type="checkbox" id="hospitals-toggle" checked> Hospitals</label><br>
-    <label><input type="checkbox" id="libraries-toggle" checked> Libraries</label><br>
-    <label><input type="checkbox" id="schools-toggle" checked> Schools</label>
+    <label>
+      <input type="checkbox" id="firestations-toggle" checked>
+      <img src="assets/icons/fire-station.png" alt="Fire Station Icon"> Fire Stations
+    </label><br>
+    <label>
+      <input type="checkbox" id="hospitals-toggle" checked>
+      <img src="assets/icons/hospital.png" alt="Hospital Icon"> Hospitals
+    </label><br>
+    <label>
+      <input type="checkbox" id="libraries-toggle" checked>
+      <img src="assets/icons/library.png" alt="Library Icon"> Libraries
+    </label><br>
+    <label>
+      <input type="checkbox" id="schools-toggle">
+      <img src="assets/icons/education.png" alt="School Icon"> Schools
+    </label><br>
+    <label>
+      <input type="checkbox" id="busStops-toggle">
+      <img src="assets/icons/bus-stop.png" alt="Bus Stop Icon"> Bus Stops
+    </label>
   </div>
 
   <!-- Map Container -->
@@ -41,16 +61,50 @@
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Initialize the map centered on Hillsborough County
-    const map = L.map('map').setView([27.9506, -82.3248], 10);
+    // Initialize the map centered on Hillsborough County with zoom level 11
+    const map = L.map('map', { zoomControl: true }).setView([27.9506, -82.3248], 11);
+    // Reposition the zoom control to the bottom left
+    map.zoomControl.setPosition('bottomleft');
 
-    // Add the CartoDB Dark Matter basemap
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // Add the OSM Positron basemap (via CartoDB Positron tile layer)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(map);
 
+    // Define custom icons using your provided file names
+    const fireStationIcon = L.icon({
+      iconUrl: 'assets/icons/fire-station.png',
+      iconSize: [30, 40],
+      iconAnchor: [15, 40],
+      popupAnchor: [0, -40]
+    });
+    const hospitalIcon = L.icon({
+      iconUrl: 'assets/icons/hospital.png',
+      iconSize: [30, 40],
+      iconAnchor: [15, 40],
+      popupAnchor: [0, -40]
+    });
+    const libraryIcon = L.icon({
+      iconUrl: 'assets/icons/library.png',
+      iconSize: [25, 35],
+      iconAnchor: [12, 35],
+      popupAnchor: [0, -35]
+    });
+    const schoolIcon = L.icon({
+      iconUrl: 'assets/icons/education.png',
+      iconSize: [25, 35],
+      iconAnchor: [12, 35],
+      popupAnchor: [0, -35]
+    });
+    const busStopIcon = L.icon({
+      iconUrl: 'assets/icons/bus-stop.png',
+      iconSize: [25, 35],
+      iconAnchor: [12, 35],
+      popupAnchor: [0, -35]
+    });
+
     // Global variables for each layer
-    let fireStationsLayer, busRoutesLayer, busStopsLayer, hospitalsLayer, librariesLayer, schoolsLayer;
+    let fireStationsLayer, hospitalsLayer, librariesLayer, schoolsLayer, busStopsLayer;
 
     // Utility function to load GeoJSON layers
     function loadLayer(url, options) {
@@ -62,42 +116,15 @@
     // Load Fire Stations layer
     loadLayer('data/FireStations.geojson', {
       onEachFeature: function(feature, layer) {
-        // Bind popup using the AKA_NAME property (adjust as needed)
         layer.bindPopup(feature.properties.AKA_NAME || "No Name");
       },
       pointToLayer: function(feature, latlng) {
-        return L.marker(latlng);
+        return L.marker(latlng, { icon: fireStationIcon });
       }
     }).then(layer => {
       fireStationsLayer = layer;
-      if(document.getElementById('firestations-toggle').checked)
+      if (document.getElementById('firestations-toggle').checked)
         fireStationsLayer.addTo(map);
-    });
-
-    // Load HART Bus Routes layer (as a line layer)
-    loadLayer('data/HART_Bus_Routes.geojson', {
-      style: { color: "#0000ff", weight: 2 },
-      onEachFeature: function(feature, layer) {
-        layer.bindPopup(feature.properties.route || "No Route");
-      }
-    }).then(layer => {
-      busRoutesLayer = layer;
-      if(document.getElementById('busRoutes-toggle').checked)
-        busRoutesLayer.addTo(map);
-    });
-
-    // Load HART Bus Stops layer
-    loadLayer('data/HART_Stop_Locations.geojson', {
-      onEachFeature: function(feature, layer) {
-        layer.bindPopup(feature.properties.name || "No Name");
-      },
-      pointToLayer: function(feature, latlng) {
-        return L.marker(latlng);
-      }
-    }).then(layer => {
-      busStopsLayer = layer;
-      if(document.getElementById('busStops-toggle').checked)
-        busStopsLayer.addTo(map);
     });
 
     // Load Hospitals layer
@@ -106,11 +133,11 @@
         layer.bindPopup(feature.properties.NAME || "No Name");
       },
       pointToLayer: function(feature, latlng) {
-        return L.marker(latlng);
+        return L.marker(latlng, { icon: hospitalIcon });
       }
     }).then(layer => {
       hospitalsLayer = layer;
-      if(document.getElementById('hospitals-toggle').checked)
+      if (document.getElementById('hospitals-toggle').checked)
         hospitalsLayer.addTo(map);
     });
 
@@ -120,37 +147,46 @@
         layer.bindPopup(feature.properties.name || "No Name");
       },
       pointToLayer: function(feature, latlng) {
-        return L.marker(latlng);
+        return L.marker(latlng, { icon: libraryIcon });
       }
     }).then(layer => {
       librariesLayer = layer;
-      if(document.getElementById('libraries-toggle').checked)
+      if (document.getElementById('libraries-toggle').checked)
         librariesLayer.addTo(map);
     });
 
-    // Load Schools layer
+    // Load Schools layer (turned off by default)
     loadLayer('data/Schools.geojson', {
+      onEachFeature: function(feature, layer) {
+        // Using "NAME" field as per previous update
+        layer.bindPopup(feature.properties.NAME || feature.properties.name || "No Name");
+      },
+      pointToLayer: function(feature, latlng) {
+        return L.marker(latlng, { icon: schoolIcon });
+      }
+    }).then(layer => {
+      schoolsLayer = layer;
+      if (document.getElementById('schools-toggle').checked)
+        schoolsLayer.addTo(map);
+    });
+
+    // Load Bus Stops layer - loaded last so they appear at the bottom of the stack
+    loadLayer('data/HART_Stop_Locations.geojson', {
       onEachFeature: function(feature, layer) {
         layer.bindPopup(feature.properties.name || "No Name");
       },
       pointToLayer: function(feature, latlng) {
-        return L.marker(latlng);
+        return L.marker(latlng, { icon: busStopIcon });
       }
     }).then(layer => {
-      schoolsLayer = layer;
-      if(document.getElementById('schools-toggle').checked)
-        schoolsLayer.addTo(map);
+      busStopsLayer = layer;
+      if (document.getElementById('busStops-toggle').checked)
+        busStopsLayer.addTo(map);
     });
 
     // Toggle event listeners for each checkbox
     document.getElementById('firestations-toggle').addEventListener('change', function(e) {
       e.target.checked ? fireStationsLayer.addTo(map) : map.removeLayer(fireStationsLayer);
-    });
-    document.getElementById('busRoutes-toggle').addEventListener('change', function(e) {
-      e.target.checked ? busRoutesLayer.addTo(map) : map.removeLayer(busRoutesLayer);
-    });
-    document.getElementById('busStops-toggle').addEventListener('change', function(e) {
-      e.target.checked ? busStopsLayer.addTo(map) : map.removeLayer(busStopsLayer);
     });
     document.getElementById('hospitals-toggle').addEventListener('change', function(e) {
       e.target.checked ? hospitalsLayer.addTo(map) : map.removeLayer(hospitalsLayer);
@@ -160,6 +196,9 @@
     });
     document.getElementById('schools-toggle').addEventListener('change', function(e) {
       e.target.checked ? schoolsLayer.addTo(map) : map.removeLayer(schoolsLayer);
+    });
+    document.getElementById('busStops-toggle').addEventListener('change', function(e) {
+      e.target.checked ? busStopsLayer.addTo(map) : map.removeLayer(busStopsLayer);
     });
   </script>
 </body>
