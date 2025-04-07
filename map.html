@@ -2,270 +2,29 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Hillsborough Community Map & Analysis</title>
+  <title>Hillsborough Community Map</title>
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
   <!-- Mapbox GL JS CSS -->
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css" rel="stylesheet">
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Turf.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
   <style>
     body { margin: 0; padding: 0; }
-    #map { position: absolute; top: 0; bottom: 0; width: 70%; }
-    #menu {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: white;
-      padding: 10px;
-      font-family: Arial, sans-serif;
-      z-index: 2;
-      border-radius: 4px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    }
-    #dashboard {
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 30%;
-      height: 100%;
-      background: #f9f9f9;
-      overflow-y: auto;
-      padding: 20px;
-      box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-    }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
   </style>
 </head>
 <body>
-  <!-- Menu for layer toggles -->
-  <div id="menu">
-    <h4>Toggle Layers</h4>
-    <label style="color: #ff0000;"><input type="checkbox" id="firestations-checkbox" checked> Fire Stations</label><br>
-    <label style="color: #0000ff;"><input type="checkbox" id="busRoutes-checkbox"> Bus Routes</label><br>
-    <label style="color: #ffc0cb;"><input type="checkbox" id="busStops-checkbox"> Bus Stops</label><br>
-    <label style="color: #008000;"><input type="checkbox" id="hospitals-checkbox" checked> Hospitals</label><br>
-    <label style="color: #800080;"><input type="checkbox" id="libraries-checkbox" checked> Libraries</label><br>
-    <label style="color: #ffa500;"><input type="checkbox" id="schools-checkbox" checked> Schools</label>
-  </div>
-  
-  <!-- Map container -->
   <div id="map"></div>
-  
-  <!-- Dashboard container for charts -->
-  <div id="dashboard">
-    <h2>Service Counts</h2>
-    <canvas id="facilityChart" width="400" height="400"></canvas>
-  </div>
-
   <!-- Mapbox GL JS -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js"></script>
   <script>
     // Set your Mapbox access token
     mapboxgl.accessToken = 'pk.eyJ1Ijoia2V2aW5tZ2lzIiwiYSI6ImNtOTY3bnJtbzFoN3Iybm9tZXkzNXg1d2QifQ.CM5JgkXadbZBg4hb0jtMjQ';
 
-    // Initialize the map with your custom style
+    // Initialize the map using your custom style from Mapbox Studio
     const map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/kevinmgis/cm96zanry009t01qt89a4caxl',
       center: [-82.3248, 27.9506],
       zoom: 10
-    });
-
-    // Configuration for layer colors (used for markers and menu labels)
-    const layerColors = {
-      'firestations-layer': '#ff0000',
-      'busRoutes-layer': '#0000ff',
-      'busStops-layer': '#ffc0cb', // light pink
-      'hospitals-layer': '#008000',
-      'libraries-layer': '#800080',
-      'schools-layer': '#ffa500'  // orange
-    };
-
-    // List of layer configurations to toggle (excluding Urban Service Areas)
-    const layers = [
-      { id: 'firestations-layer', checkboxId: 'firestations-checkbox' },
-      { id: 'busRoutes-layer', checkboxId: 'busRoutes-checkbox' },
-      { id: 'busStops-layer', checkboxId: 'busStops-checkbox' },
-      { id: 'hospitals-layer', checkboxId: 'hospitals-checkbox' },
-      { id: 'libraries-layer', checkboxId: 'libraries-checkbox' },
-      { id: 'schools-layer', checkboxId: 'schools-checkbox' }
-    ];
-
-    // Toggle layer visibility based on checkbox status
-    layers.forEach(layer => {
-      document.getElementById(layer.checkboxId).addEventListener('change', function(e) {
-        const visibility = e.target.checked ? 'visible' : 'none';
-        map.setLayoutProperty(layer.id, 'visibility', visibility);
-      });
-    });
-
-    // Function to add popups on feature click. Accepts a propertyName parameter.
-    function addPopup(layerId, labelText, propertyName) {
-      map.on('click', layerId, function(e) {
-        const feature = e.features[0];
-        const props = feature.properties;
-        const featureName = props[propertyName] || props.name || props.NAME || 'No name provided';
-        const content = `<strong style="color: ${layerColors[layerId]};">${labelText}:</strong> ${featureName}`;
-        new mapboxgl.Popup()
-          .setLngLat(e.lngLat)
-          .setHTML(content)
-          .addTo(map);
-      });
-      
-      map.on('mouseenter', layerId, function() {
-        map.getCanvas().style.cursor = 'pointer';
-      });
-      map.on('mouseleave', layerId, function() {
-        map.getCanvas().style.cursor = '';
-      });
-    }
-
-    map.on('load', function() {
-      // ---------------------
-      // 1. Fire Stations Layer - Using 'AKA_NAME'
-      // ---------------------
-      map.addSource('firestations', {
-        type: 'geojson',
-        data: 'data/FireStations.geojson'
-      });
-      map.addLayer({
-        id: 'firestations-layer',
-        type: 'circle',
-        source: 'firestations',
-        paint: {
-          'circle-radius': 6,
-          'circle-color': layerColors['firestations-layer']
-        }
-      });
-      addPopup('firestations-layer', 'Fire Station', 'AKA_NAME');
-
-      // ---------------------
-      // 2. Bus Routes (hidden by default)
-      // ---------------------
-      map.addSource('busRoutes', {
-        type: 'geojson',
-        data: 'data/HART_Bus_Routes.geojson'
-      });
-      map.addLayer({
-        id: 'busRoutes-layer',
-        type: 'line',
-        source: 'busRoutes',
-        layout: { 'visibility': 'none' },
-        paint: {
-          'line-width': 2,
-          'line-color': layerColors['busRoutes-layer']
-        }
-      });
-
-      // ---------------------
-      // 3. Bus Stops (hidden by default)
-      // ---------------------
-      map.addSource('busStops', {
-        type: 'geojson',
-        data: 'data/HART_Stop_Locations.geojson'
-      });
-      map.addLayer({
-        id: 'busStops-layer',
-        type: 'circle',
-        source: 'busStops',
-        layout: { 'visibility': 'none' },
-        paint: {
-          'circle-radius': 5,
-          'circle-color': layerColors['busStops-layer']
-        }
-      });
-      addPopup('busStops-layer', 'Bus Stop', 'name');
-
-      // ---------------------
-      // 4. Hospitals Layer - Using 'NAME'
-      // ---------------------
-      map.addSource('hospitals', {
-        type: 'geojson',
-        data: 'data/Hospitals.geojson'
-      });
-      map.addLayer({
-        id: 'hospitals-layer',
-        type: 'circle',
-        source: 'hospitals',
-        paint: {
-          'circle-radius': 6,
-          'circle-color': layerColors['hospitals-layer']
-        }
-      });
-      addPopup('hospitals-layer', 'Hospital', 'NAME');
-
-      // ---------------------
-      // 5. Libraries Layer - Assuming property 'name'
-      // ---------------------
-      map.addSource('libraries', {
-        type: 'geojson',
-        data: 'data/Libraries.geojson'
-      });
-      map.addLayer({
-        id: 'libraries-layer',
-        type: 'circle',
-        source: 'libraries',
-        paint: {
-          'circle-radius': 6,
-          'circle-color': layerColors['libraries-layer']
-        }
-      });
-      addPopup('libraries-layer', 'Library', 'name');
-
-      // ---------------------
-      // 6. Schools Layer - Using 'name' (change if necessary)
-      // ---------------------
-      map.addSource('schools', {
-        type: 'geojson',
-        data: 'data/Schools.geojson'
-      });
-      map.addLayer({
-        id: 'schools-layer',
-        type: 'circle',
-        source: 'schools',
-        paint: {
-          'circle-radius': 6,
-          'circle-color': layerColors['schools-layer']
-        }
-      });
-      addPopup('schools-layer', 'School', 'name');
-
-      // ---------------------
-      // Create a Pie Chart after the map is idle (all sources loaded)
-      // ---------------------
-      map.once('idle', function() {
-        // Extract feature counts for each service layer
-        const fireCount = map.getSource('firestations')._data.features.length;
-        const hospitalCount = map.getSource('hospitals')._data.features.length;
-        const libraryCount = map.getSource('libraries')._data.features.length;
-        const schoolCount = map.getSource('schools')._data.features.length;
-
-        // Labels and counts for the pie chart
-        const labels = ['Fire Stations', 'Hospitals', 'Libraries', 'Schools'];
-        const counts = [fireCount, hospitalCount, libraryCount, schoolCount];
-
-        // Create a pie chart using Chart.js
-        const ctx = document.getElementById('facilityChart').getContext('2d');
-        new Chart(ctx, {
-          type: 'pie',
-          data: {
-            labels: labels,
-            datasets: [{
-              data: counts,
-              backgroundColor: [
-                layerColors['firestations-layer'],
-                layerColors['hospitals-layer'],
-                layerColors['libraries-layer'],
-                layerColors['schools-layer']
-              ]
-            }]
-          },
-          options: {
-            responsive: true
-          }
-        });
-      });
     });
   </script>
 </body>
