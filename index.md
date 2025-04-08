@@ -1,54 +1,59 @@
 ---
 layout: default
-title: Hillsborough Community Map Project
+title: Community Services Map Projects
 ---
 
-[View the Interactive Map](map.html)
+[View Hillsborough County Services Map](https://kevinmgis.github.io/Hills_Safety_and_Services/map.html)  
+[View Pasco County Services Map](https://kevinmgis.github.io/Pasco_Service_Visualization/map.html)
 
-# Hillsborough County Services Visualization
+# Community Services Map Projects
 
-**Hillsborough County Services Visualization** is a portfolio project that displays multiple service layers—including Fire Stations, Hospitals, Libraries, Schools, and Bus Stops—on an interactive Leaflet map. The project uses fully open source tools to develop a rich, data-driven visualization of key community facilities in Hillsborough County.
+This site showcases two interactive web maps that visualize community services in two different counties using different technologies.
 
-## Project Overview
+## Hillsborough County Services Visualization
 
-The final solution of the project integrates several advanced features:
-- **Custom Basemap with Switcher:** Users can choose between different open source basemaps (for example, Positron, Dark Matter, and OpenStreetMap) via a dropdown control.
-- **Clustered Data Layers with Custom Icons:** Multiple service layers are loaded as clustered markers. Custom icons represent each category, enhancing visual clarity even in areas with high marker density.
-- **Interactive Legend:** An interactive legend is positioned on the map, displaying an icon and label for each service type. Clicking on a legend item toggles the visibility of the corresponding layer.
-- **Dynamic Charts:** Two interactive charts are incorporated:
-  - A **Pie Chart** displays counts of markers within the current map view for active layers.
-  - A **Bar Chart** shows overall counts for active layers, independent of the current view.
-- **Additional Controls:** A scale bar and a coordinate display provide further context, showing the current map scale and the mouse coordinates as the user moves over the map.
+The Hillsborough County Services Visualization project displays multiple service layers—including Fire Stations, Hospitals, Libraries, Schools, and Bus Stops—on a custom Leaflet map. This project was built entirely with open source tools. It features:
+  
+- A custom basemap with a switcher (allowing users to choose between various open source basemaps such as Positron, Dark Matter, and OpenStreetMap).
+- Multiple data layers loaded as clustered markers with custom icons.
+- An interactive legend that toggles layer visibility.
+- Two dynamic charts (a pie chart showing counts within the current view and a bar chart showing overall counts).
+- Additional controls such as a scale bar and a coordinate display.
 
-## Development Process
+This solution demonstrates the flexibility and power of open source mapping libraries and techniques, offering a rich, data-driven visualization of key community facilities in Hillsborough County.
 
-**Phase 1: Map Setup with Leaflet**  
-A basic Leaflet map was established using an open source OSM-based basemap. The map was centered on Hillsborough County at an appropriate zoom level to clearly present regional services.
+## Pasco County Services Map
 
-**Phase 2: Custom Icons and Marker Clustering**  
-Custom icons were created for each service category. Each service layer’s GeoJSON data was loaded into a clustering group to manage high volumes of markers. This approach improved the map’s readability and performance.
+In contrast, the Pasco County Services map was developed using the ArcGIS API for JavaScript. This project similarly displays service layers for Pasco County but leverages the extensive functionality provided by the ArcGIS platform. Key features include:
 
-**Phase 3: Interactive Legend**  
-An interactive legend was designed to allow users to toggle the visibility of individual layers directly from the map interface. The legend was dynamically generated based on an array of layer properties, and its appearance (such as opacity) indicated whether a layer was active.
+- A robust and feature-rich basemap from Esri with high-quality cartography.
+- Data layers and features seamlessly integrated using the ArcGIS API, which offers advanced spatial analysis and querying capabilities.
+- Built‑in interactive widgets and controls from the ArcGIS ecosystem that provide a streamlined user experience.
+- A different development approach that leverages Esri's extensive libraries, simplifying some aspects of the integration while providing powerful mapping and analysis tools.
 
-**Phase 4: Dynamic Interactive Charts**  
-Two charts were integrated to provide visual summaries of the data:
-- The **Pie Chart** updates to reflect the number of markers currently visible on the map for each active service layer.
-- The **Bar Chart** displays overall counts for each active service layer, regardless of the current map view.
-Both charts refresh dynamically as users move around the map or toggle layers using the legend.
+## Comparison of Methods
 
-**Phase 5: Additional Interactive Controls**  
-Additional controls were added to enhance user interactivity:
-- A **Basemap Switcher** enables users to swap between different basemap styles.
-- A **Coordinate Display** shows current mouse coordinates, while a built‑in scale bar provides context for distances on the map.
+The two projects illustrate different approaches to building interactive web maps:
+
+- **Open Source (Hillsborough County):**  
+  - Offers complete control over styling, data integration, and functionality.
+  - Involves combining multiple open source libraries (Leaflet, MarkerCluster, Chart.js, etc.) to create a tailored solution.
+  - Provides flexibility in customizing every aspect of the map and its interactivity.
+
+- **ArcGIS API for JavaScript (Pasco County):**  
+  - Leverages a comprehensive, ready-to-use mapping platform with high-quality basemaps and built‑in tools.
+  - Simplifies complex tasks such as spatial analysis, data integration, and widget deployment.
+  - Reduces development time by using Esri’s extensive libraries and services.
+
+Both methods have their advantages. The open source approach allows for maximum customization and is ideal for projects that require a bespoke user experience, while the ArcGIS API offers a powerful, integrated environment that can speed up development and take advantage of Esri’s mapping expertise.
 
 ## Conclusion
 
-This project evolved from a simple Leaflet map to a comprehensive interactive visualization of community services. The final solution showcases:
+The projects evolved from a basic mapping solution to comprehensive interactive visualizations. The final solutions include:
 - A custom, switchable basemap.
 - Clustered markers with custom icons for various service layers.
 - An interactive legend for easy layer management.
 - Dynamic pie and bar charts that update in real time.
 - Additional controls such as a scale bar and a coordinate display.
 
-The project demonstrates the effective use of open source tools to create a rich, interactive mapping application that provides valuable insights into community resources in Hillsborough County.
+These projects demonstrate the effective use of open source tools and the ArcGIS API to create rich, interactive mapping applications that provide valuable insights into community services.
